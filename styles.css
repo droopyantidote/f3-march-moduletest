@@ -1,71 +1,52 @@
-* {
-    box-sizing: border-box;
-}
-
 body {
-    font-family: Arial, sans-serif;
-    text-align: center;
-    background-color: rgba(26,26,28,1);
+    background-color: black;
+    color: white;
 }
 
 .container {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 40px;
-}
-
-h1 {
-    margin-bottom: 20px;
+    margin: 20px auto;
+    width: 80%;
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
-    color: #FFFFFF;
 }
 
-th, td {
-    border: none;
-    padding: 8px;
+td {
+    padding: 10px;
+    text-align: center;
+    border-bottom: 1px solid white;
 }
 
-tr {
-    border-bottom: 1px solid grey; 
+td:first-child {
+    border-right: none;
 }
 
-
-
-
-
-input::placeholder {
-    color: #FFFFFF; 
-}
-
-#searchInput {
-    width: 500px;
-    height: 40px;
-    padding: 5px;
-    color: #FFFFFF;
-    background-color: rgba(26,26,28,1);
-    border: 1px solid #8E8E8E;
+img {
+    width: 30px;
+    height: 30px;
 }
 
 input[type="text"] {
-    padding: 5px;
-    margin-right: 10px;
+    width: 750px;
+    margin-right: 10px; 
+    background-color: black;
+    color: white;
+    padding: 12px;
+    border: 1px solid #ccc;
+}
+
+input[type="text"]::placeholder {
+    color: white;
 }
 
 button {
-    width: 167px;
-    height: 40px;
-    color: #FFFFFF;
-    border: 1px solid #8E8E8E;
+    font-size: 16px;
+    padding: 10px;
+    background-color: black;
+    color: white;
+    border: 1px solid #ccc;
     cursor: pointer;
-    background-color: rgba(26,26,28,1);
-}
-
-th {
-    color: #FFFFFF;
+    margin-right: 10px; 
 }

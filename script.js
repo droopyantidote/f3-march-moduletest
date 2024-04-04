@@ -1,66 +1,117 @@
-// Function to fetch data from API using .then
-function fetchDataWithThen() {
-    fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=10&page=1&sparkline=false')
-        .then(response => response.json())
-        .then(data => renderTable(data))
-        .catch(error => console.error('Error fetching data:', error));
-}
+document.addEventListener('DOMContentLoaded', function () {
+    fetchData();
+    const searchInput = document.getElementById('searchInput');
+    let debounceTimeout;
 
-// Function to fetch data from API using async/await
-async function fetchDataWithAsyncAwait() {
+    searchInput.addEventListener('input', function(event) {
+        clearTimeout(debounceTimeout);
+        debounceTimeout = setTimeout(searchByName, 300); 
+    });
+
+    searchInput.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            clearTimeout(debounceTimeout);
+            searchByName();
+        }
+    });
+});
+
+async function fetchData() {
     try {
-        const response = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=10&page=1&sparkline=false');
+        const response = await fetch('https://cors-anywhere.herokuapp.com/data.json');
         const data = await response.json();
-        renderTable(data);
+        renderCryptoTable(data);
     } catch (error) {
         console.error('Error fetching data:', error);
     }
 }
 
-// Function to render data in table
-function renderTable(data) {
-    const tableBody = document.getElementById('cryptoTableBody');
-    tableBody.innerHTML = ''; // Clear previous data
-
-    data.forEach(coin => {
+function renderCryptoTable(data) {
+    const cryptoTableBody = document.getElementById('cryptoTableBody');
+    cryptoTableBody.innerHTML = '';
+    data.forEach(crypto => {
         const row = document.createElement('tr');
-        row.innerHTML = `
-            <td><img src="${coin.image}" alt="${coin.name}" style="width: 30px; height: 30px;"> ${coin.name}</td>
-            <td>${coin.symbol}</td>
-            <td>${coin.current_price}</td>
-            <td>${coin.total_volume}</td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
 
-// Function to filter data based on search input
-function filterData() {
-    const searchInput = document.getElementById('searchInput').value.toLowerCase();
-    const rows = document.querySelectorAll('#cryptoTableBody tr');
+        const iconCell = document.createElement('td');
+        const icon = document.createElement('img');
+        icon.src = crypto.image;
+        icon.alt = crypto.name;
+        iconCell.appendChild(icon);
+        row.appendChild(iconCell);
 
-    rows.forEach(row => {
-        const name = row.getElementsByTagName('td')[0].innerText.toLowerCase();
-        if (name.includes(searchInput)) {
-            row.style.display = '';
+        const nameCell = document.createElement('td');
+        nameCell.textContent = crypto.name;
+        nameCell.style.padding = '0';
+        row.appendChild(nameCell);
+
+        const symbolCell = document.createElement('td');
+        symbolCell.textContent = crypto.symbol;
+        symbolCell.style.padding = '0';
+        row.appendChild(symbolCell);
+
+        const priceCell = document.createElement('td');
+        priceCell.textContent = '$' + crypto.current_price.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        row.appendChild(priceCell);
+
+        const volumeCell = document.createElement('td');
+        volumeCell.textContent = '$' + crypto.total_volume.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        row.appendChild(volumeCell);
+
+        const percentageChangeCell = document.createElement('td');
+        const percentageChangeValue = parseFloat(crypto.price_change_percentage_24h).toFixed(2);
+        const percentageChangeText =  percentageChangeValue + '%';
+        percentageChangeCell.textContent = percentageChangeText;
+        if (percentageChangeValue >= 0) {
+            percentageChangeCell.style.color = 'green';
         } else {
-            row.style.display = 'none';
+            percentageChangeCell.style.color = 'red';
         }
+        row.appendChild(percentageChangeCell);
+
+        const marketCapCell = document.createElement('td');
+        marketCapCell.textContent = 'Mkt Cap: $' + crypto.market_cap.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        row.appendChild(marketCapCell);
+
+        cryptoTableBody.appendChild(row);
     });
 }
 
-// Function to sort data based on market cap or percentage change
-function sortData(property) {
-    const rows = Array.from(document.querySelectorAll('#cryptoTableBody tr'));
-    const sortedRows = rows.sort((a, b) => {
-        const valueA = parseFloat(a.getElementsByTagName('td')[property === 'marketCap' ? 3 : 4].innerText.replace('$', '').replace(/,/g, ''));
-        const valueB = parseFloat(b.getElementsByTagName('td')[property === 'marketCap' ? 3 : 4].innerText.replace('$', '').replace(/,/g, ''));
-        return valueB - valueA;
-    });
-
-    const tableBody = document.getElementById('cryptoTableBody');
-    sortedRows.forEach(row => tableBody.appendChild(row));
+async function searchByName() {
+    const input = document.getElementById('searchInput').value.toLowerCase();
+    try {
+        const response = await fetch('data.json');
+        const data = await response.json();
+        const filteredData = data.filter(crypto => {
+            const nameMatch = crypto.name.toLowerCase().includes(input);
+            const symbolMatch = crypto.symbol.toLowerCase().includes(input);
+            return nameMatch || symbolMatch;
+        });
+        renderCryptoTable(filteredData);
+    } catch (error) {
+        console.error('Error fetching data:', error);
+    }
 }
 
-// Fetch data initially
-fetchDataWithThen(); // Or fetchDataWithAsyncAwait();
+function sortByMarketCap() {
+    const cryptoTableBody = document.getElementById('cryptoTableBody');
+    const rows = Array.from(cryptoTableBody.querySelectorAll('tr'));
+    rows.sort((row1, row2) => {
+        const marketCap1 = parseFloat(row1.children[6].textContent.substring(10).replace(/,/g, ""));
+        const marketCap2 = parseFloat(row2.children[6].textContent.substring(10).replace(/,/g, ""));
+        return marketCap2 - marketCap1;
+    });
+    cryptoTableBody.innerHTML = '';
+    rows.forEach(row => cryptoTableBody.appendChild(row));
+}
+
+function sortByPercentageChange() {
+    const cryptoTableBody = document.getElementById('cryptoTableBody');
+    const rows = Array.from(cryptoTableBody.querySelectorAll('tr'));
+    rows.sort((row1, row2) => {
+        const percentageChange1 = parseFloat(row1.children[5].textContent.substring(1, row1.children[5].textContent.indexOf('%')));
+        const percentageChange2 = parseFloat(row2.children[5].textContent.substring(1, row2.children[5].textContent.indexOf('%')));
+        return percentageChange2 - percentageChange1;
+    });
+    cryptoTableBody.innerHTML = '';
+    rows.forEach(row => cryptoTableBody.appendChild(row));
+}
