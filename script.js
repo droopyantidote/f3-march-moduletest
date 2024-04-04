@@ -1,117 +1,110 @@
-document.addEventListener('DOMContentLoaded', function () {
-    fetchData();
-    const searchInput = document.getElementById('searchInput');
-    let debounceTimeout;
+const tbody = document.querySelector("tbody");
+const searchBox = document.querySelector(".search-box");
+const sortMktCap = document.querySelector(".mktCapSort");
+const sortPercentage = document.querySelector(".percentSort");
 
-    searchInput.addEventListener('input', function(event) {
-        clearTimeout(debounceTimeout);
-        debounceTimeout = setTimeout(searchByName, 300); 
-    });
+// fetching data using async function with await keyword
+fetchCrypto();
+async function fetchCrypto() {
+  try {
+    const responseBody = await fetch(
+      "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=10&page=1&sparkline=false"
+    );
+    if (!responseBody.ok) {
+      throw new Error("Network response was not ok");
+    }
+    const data = await responseBody.json();
 
-    searchInput.addEventListener('keydown', function(event) {
-        if (event.key === 'Enter') {
-            clearTimeout(debounceTimeout);
-            searchByName();
-        }
-    });
+    // Store data in localStorage
+    localStorage.setItem("coinData", JSON.stringify(data));
+    const capturedData = JSON.parse(localStorage.getItem("coinData"));
+    // console.log(capturedData);
+    // Create rows in the table
+    loopObject(capturedData);
+    // capturedData.forEach(createRow);
+    // data.forEach(createRow);
+
+    // console.log(data);
+  } catch (error) {
+    if (error.response && error.response.status === 429) {
+      console.log("Rate limit exceeded. Waiting before retrying...");
+      // Implement a backoff strategy, e.g., wait for 1 minute before retrying
+      setTimeout(fetchCrypto, 60000); // Wait for 1 minute (60000 milliseconds) before retrying
+    } else {
+      console.error("Error fetching data:", error);
+      // Retry after 1 minute in case of any error
+      setTimeout(fetchCrypto, 60000); // Wait for 1 minute (60000 milliseconds) before retrying
+    }
+  }
+}
+
+// loop for all given object array
+function loopObject(obj) {
+  tbody.innerHTML = "";
+  obj.forEach(createRow);
+}
+
+// Row creating function
+function createRow(obj) {
+  // tbody.innerHTML = "";
+  const row = document.createElement("tr");
+  row.id = `${obj.id}`;
+  row.classList.add('row');
+  row.innerHTML = `<td><img src="${obj.image}" alt="${obj.name}"/> ${
+    obj.name
+  }</td>
+                   <td>${obj.symbol.toUpperCase()}</td>
+                   <td class="text-right">$${obj.current_price}</td>
+                   <td class="text-right">$${obj.total_volume}</td>
+                   <td class="td-green">${obj.price_change_percentage_24h.toFixed(
+                     2
+                   )}%</td>
+                   <td>Mkt Cap: ${obj.market_cap}</td>`;
+  let elePer = row.childNodes[8];
+
+  if (obj.price_change_percentage_24h < 0) {
+    elePer.className = "td-red  text-center";
+  } else {
+    elePer.className = "td-green  text-center";
+  }
+  tbody.appendChild(row);
+}
+
+// search box event
+// console.log(searchBox);
+searchBox.addEventListener("input", (e) => {
+  const enteredText = searchBox.value;
+  // console.log(enteredText);
+  const arr = JSON.parse(localStorage.getItem("coinData"));
+  // console.log(arr);
+  // arr.forEach((ele) => {
+  //   console.log(ele.name);
+  //   console.log(ele.name.toLowerCase().includes(enteredText.toLowerCase()));
+  // });
+  let val = arr.filter((ele, i) => {
+    return (
+      ele.name.toLowerCase().includes(enteredText.toLowerCase()) ||
+      ele.symbol.toLowerCase().includes(enteredText.toLowerCase())
+    );
+  });
+  console.log(val);
+  loopObject(val);
 });
 
-async function fetchData() {
-    try {
-        const response = await fetch('https://cors-anywhere.herokuapp.com/data.json');
-        const data = await response.json();
-        renderCryptoTable(data);
-    } catch (error) {
-        console.error('Error fetching data:', error);
-    }
-}
+// sorting event for mktCap button
+sortMktCap.addEventListener("click", (e) => {
+  const arr = JSON.parse(localStorage.getItem("coinData"));
+  const sorted = arr.sort((a, b) => a.market_cap - b.market_cap);
+  // console.log(sorted);
+  loopObject(sorted);
+});
 
-function renderCryptoTable(data) {
-    const cryptoTableBody = document.getElementById('cryptoTableBody');
-    cryptoTableBody.innerHTML = '';
-    data.forEach(crypto => {
-        const row = document.createElement('tr');
-
-        const iconCell = document.createElement('td');
-        const icon = document.createElement('img');
-        icon.src = crypto.image;
-        icon.alt = crypto.name;
-        iconCell.appendChild(icon);
-        row.appendChild(iconCell);
-
-        const nameCell = document.createElement('td');
-        nameCell.textContent = crypto.name;
-        nameCell.style.padding = '0';
-        row.appendChild(nameCell);
-
-        const symbolCell = document.createElement('td');
-        symbolCell.textContent = crypto.symbol;
-        symbolCell.style.padding = '0';
-        row.appendChild(symbolCell);
-
-        const priceCell = document.createElement('td');
-        priceCell.textContent = '$' + crypto.current_price.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        row.appendChild(priceCell);
-
-        const volumeCell = document.createElement('td');
-        volumeCell.textContent = '$' + crypto.total_volume.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        row.appendChild(volumeCell);
-
-        const percentageChangeCell = document.createElement('td');
-        const percentageChangeValue = parseFloat(crypto.price_change_percentage_24h).toFixed(2);
-        const percentageChangeText =  percentageChangeValue + '%';
-        percentageChangeCell.textContent = percentageChangeText;
-        if (percentageChangeValue >= 0) {
-            percentageChangeCell.style.color = 'green';
-        } else {
-            percentageChangeCell.style.color = 'red';
-        }
-        row.appendChild(percentageChangeCell);
-
-        const marketCapCell = document.createElement('td');
-        marketCapCell.textContent = 'Mkt Cap: $' + crypto.market_cap.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        row.appendChild(marketCapCell);
-
-        cryptoTableBody.appendChild(row);
-    });
-}
-
-async function searchByName() {
-    const input = document.getElementById('searchInput').value.toLowerCase();
-    try {
-        const response = await fetch('data.json');
-        const data = await response.json();
-        const filteredData = data.filter(crypto => {
-            const nameMatch = crypto.name.toLowerCase().includes(input);
-            const symbolMatch = crypto.symbol.toLowerCase().includes(input);
-            return nameMatch || symbolMatch;
-        });
-        renderCryptoTable(filteredData);
-    } catch (error) {
-        console.error('Error fetching data:', error);
-    }
-}
-
-function sortByMarketCap() {
-    const cryptoTableBody = document.getElementById('cryptoTableBody');
-    const rows = Array.from(cryptoTableBody.querySelectorAll('tr'));
-    rows.sort((row1, row2) => {
-        const marketCap1 = parseFloat(row1.children[6].textContent.substring(10).replace(/,/g, ""));
-        const marketCap2 = parseFloat(row2.children[6].textContent.substring(10).replace(/,/g, ""));
-        return marketCap2 - marketCap1;
-    });
-    cryptoTableBody.innerHTML = '';
-    rows.forEach(row => cryptoTableBody.appendChild(row));
-}
-
-function sortByPercentageChange() {
-    const cryptoTableBody = document.getElementById('cryptoTableBody');
-    const rows = Array.from(cryptoTableBody.querySelectorAll('tr'));
-    rows.sort((row1, row2) => {
-        const percentageChange1 = parseFloat(row1.children[5].textContent.substring(1, row1.children[5].textContent.indexOf('%')));
-        const percentageChange2 = parseFloat(row2.children[5].textContent.substring(1, row2.children[5].textContent.indexOf('%')));
-        return percentageChange2 - percentageChange1;
-    });
-    cryptoTableBody.innerHTML = '';
-    rows.forEach(row => cryptoTableBody.appendChild(row));
-}
+// sorting event for
+sortPercentage.addEventListener("click", (e) => {
+  const arr = JSON.parse(localStorage.getItem("coinData"));
+  const sorted = arr.sort(
+    (a, b) => a.price_change_percentage_24h - b.price_change_percentage_24h
+  );
+  // console.log(sorted);
+  loopObject(sorted);
+});
